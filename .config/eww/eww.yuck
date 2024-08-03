@@ -1,0 +1,103 @@
+; Windows foldstart
+(defwindow bar
+  :monitor 0
+  :hexpand false
+  :vexpand false
+  :geometry (geometry :anchor "top left" :x 0 :y 0 :width "100%")
+  :reserve (struts :distance "10px" :side "top")
+  (bar :screen 0))
+; foldend
+
+; Bar foldstart
+(defwidget bar [screen]
+  (box :orientation "h"
+       :space-evenly false
+       :class "bar"
+     (window_w)
+    (box :halign "end"
+         :spacing 12
+         :hexpand true
+         :space-evenly false
+      (battery)
+      (battery2)
+      (microphone)
+      (speaker)
+      (disk)
+      (ram)
+      (cpu)
+      (date)
+      (time))))
+; foldend
+
+; Variables foldstart
+(defpoll time_poll :interval "1s" "date +%H:%M")
+(defpoll date_poll :interval "1m" "date +%d/%m/%Y")
+(defpoll batt_poll :interval "3s" "cat /sys/class/power_supply/BAT0/capacity")
+(defpoll batt2_poll :interval "3s" "cat /sys/class/power_supply/BAT1/capacity")
+
+(deflisten window :initial "..." "./modules/window-title.sh")
+
+; Make this cleaner at some point
+(defpoll microphone_poll :interval "999h" "./modules/microphone.sh")
+(defpoll speaker_poll :interval "999h" "./modules/speaker.sh")
+; foldend
+
+; Modules foldstart
+; Generic icon module foldstart
+(defwidget icon-module [icon ?class ?visible]
+  (box :class "${class} icon-module"
+       :orientation "h"
+       :halign "end"
+       :space-evenly false
+       :visible {visible ?: true} ; because the argument is optional
+    (label :class "icon-module__icon" :text "${icon}")
+    (children)))
+; foldend
+
+(defwidget window_w []
+  (box(label :text "${window}")))
+
+(defwidget ram []
+  (icon-module :class "ram" :icon "" :visible {EWW_RAM.used_mem_perc != ""}
+    (label :text "${round(EWW_RAM.used_mem_perc, 0)}%")))
+
+(defwidget date []
+  (icon-module :class "date" :icon " " 
+    (label :text date_poll)))
+
+(defwidget time []
+  (icon-module :class "time" :icon " " 
+    (label :text time_poll))) 
+
+(defwidget cpu []
+  (icon-module :class "cpu" :icon " " 
+    (label :text "${round(EWW_CPU.avg, 0)}%")))
+
+(defwidget battery []
+  (icon-module :class "battery" :icon " "
+  (label :text batt_poll)))
+
+(defwidget battery2 []
+  (icon-module :class "battery2" :icon " "
+  (label :text batt2_poll)))
+
+(defwidget disk []
+  (icon-module :class "disk" :icon " " 
+    (label :text "${round(EWW_DISK["/"].used_perc, 0)}%"))) 
+
+(defwidget speaker []
+  (icon-module :class "speaker" 
+               :icon {speaker_poll.icon}
+    (eventbox :onscroll `eww update speaker_poll="$(./modules/speaker.sh {})"`
+      (button :onclick `eww update speaker_poll="$(./modules/speaker.sh toogle)"`
+        (label :text {speaker_poll.content})))))
+
+(defwidget microphone []
+  (icon-module :class "microphone" 
+               :icon {microphone_poll.icon}
+    (eventbox :onscroll `eww update microphone_poll="$(./modules/microphone.sh {})"`
+      (button :onclick `eww update microphone_poll="$(./modules/microphone.sh toogle)"`
+        (label :text {microphone_poll.content})))))
+; foldend
+
+; vim:foldmarker=foldstart,foldend
